@@ -23,6 +23,7 @@ const ts = __importStar(require("typescript"));
 const tjs = __importStar(require("typescript-json-schema"));
 exports.default = (program) => {
     const typeChecker = program.getTypeChecker();
+    const schemaGenerator = tjs.buildGenerator(program, { ignoreErrors: true, required: true });
     const transformerFactory = (context) => {
         return (sourceFile) => {
             const visitor = (node) => {
@@ -40,11 +41,10 @@ exports.default = (program) => {
                         }
                         const type = typeChecker.getTypeFromTypeNode(typeArgument);
                         const symbol = type.aliasSymbol || type.symbol;
-                        const options = { id: symbol.name, ignoreErrors: true, required: true };
                         if (!symbol) {
                             throw new Error(`Could not find symbol for passed type`);
                         }
-                        return toLiteral(tjs.generateSchema(program, symbol.name, options));
+                        return toLiteral(schemaGenerator === null || schemaGenerator === void 0 ? void 0 : schemaGenerator.getSchemaForSymbol(symbol.name));
                     }
                 }
                 return ts.visitEachChild(node, visitor, context);

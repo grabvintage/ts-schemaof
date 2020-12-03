@@ -3,6 +3,7 @@ import * as tjs from 'typescript-json-schema';
 
 export default (program: ts.Program) => {
   const typeChecker = program.getTypeChecker();
+  const schemaGenerator = tjs.buildGenerator(program as any, { ignoreErrors: true, required: true } as any);
 
   const transformerFactory: ts.TransformerFactory<ts.SourceFile> = (context: ts.TransformationContext) => {
     return (sourceFile: ts.SourceFile) => {
@@ -24,13 +25,12 @@ export default (program: ts.Program) => {
 
             const type = typeChecker.getTypeFromTypeNode(typeArgument);
             const symbol = type.aliasSymbol || type.symbol;
-            const options = { id: symbol.name, ignoreErrors: true, required: true };
 
             if (!symbol) {
               throw new Error(`Could not find symbol for passed type`);
             }
 
-            return toLiteral(tjs.generateSchema(program as any, symbol.name, options as any));
+            return toLiteral(schemaGenerator?.getSchemaForSymbol(symbol.name));
           }
         }
 
