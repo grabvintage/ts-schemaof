@@ -1,9 +1,20 @@
 import * as ts from 'typescript';
-import * as tjs from 'typescript-json-schema';
+import * as tsj from 'ts-json-schema-generator';
 
 export default (program: ts.Program) => {
   const typeChecker = program.getTypeChecker();
-  const schemaGenerator = tjs.buildGenerator(program as any, { ignoreErrors: true, required: true } as any);
+
+  let path: string | null = null;
+  let generator: tsj.SchemaGenerator | null = null;
+  function getGenerator(config: tsj.Config) {
+    if (config.path === path && generator) {
+      return generator;
+    }
+
+    path = config.path ?? null;
+    generator = tsj.createGenerator(config);
+    return generator;
+  }
 
   const transformerFactory: ts.TransformerFactory<ts.SourceFile> = (context: ts.TransformationContext) => {
     return (sourceFile: ts.SourceFile) => {
@@ -26,11 +37,19 @@ export default (program: ts.Program) => {
             const type = typeChecker.getTypeFromTypeNode(typeArgument);
             const symbol = type.aliasSymbol || type.symbol;
 
+            const config = {
+              // @ts-expect-error
+              tsconfig: `${program.getCommonSourceDirectory()}tsconfig.json`,
+              path: node.getSourceFile().fileName,
+              skipTypeCheck: true,
+              expose: 'all',
+            };
+
             if (!symbol) {
               throw new Error(`Could not find symbol for passed type`);
             }
 
-            return toLiteral(schemaGenerator?.getSchemaForSymbol(symbol.name));
+            return toLiteral(getGenerator(config as any).createSchema(symbol.name));
           }
         }
 

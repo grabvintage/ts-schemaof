@@ -20,10 +20,20 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const ts = __importStar(require("typescript"));
-const tjs = __importStar(require("typescript-json-schema"));
+const tsj = __importStar(require("ts-json-schema-generator"));
 exports.default = (program) => {
     const typeChecker = program.getTypeChecker();
-    const schemaGenerator = tjs.buildGenerator(program, { ignoreErrors: true, required: true });
+    let path = null;
+    let generator = null;
+    function getGenerator(config) {
+        var _a;
+        if (config.path === path && generator) {
+            return generator;
+        }
+        path = (_a = config.path) !== null && _a !== void 0 ? _a : null;
+        generator = tsj.createGenerator(config);
+        return generator;
+    }
     const transformerFactory = (context) => {
         return (sourceFile) => {
             const visitor = (node) => {
@@ -41,10 +51,17 @@ exports.default = (program) => {
                         }
                         const type = typeChecker.getTypeFromTypeNode(typeArgument);
                         const symbol = type.aliasSymbol || type.symbol;
+                        const config = {
+                            // @ts-expect-error
+                            tsconfig: `${program.getCommonSourceDirectory()}tsconfig.json`,
+                            path: node.getSourceFile().fileName,
+                            skipTypeCheck: true,
+                            expose: 'all',
+                        };
                         if (!symbol) {
                             throw new Error(`Could not find symbol for passed type`);
                         }
-                        return toLiteral(schemaGenerator === null || schemaGenerator === void 0 ? void 0 : schemaGenerator.getSchemaForSymbol(symbol.name));
+                        return toLiteral(getGenerator(config).createSchema(symbol.name));
                     }
                 }
                 return ts.visitEachChild(node, visitor, context);
