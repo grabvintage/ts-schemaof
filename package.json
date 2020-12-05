@@ -1,19 +1,23 @@
 {
   "name": "@grabvintage/ts-schemaof",
-  "version": "1.2.0",
-  "description": "",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "version": "1.2.1",
+  "description": "Generate JSON schema from TypeScript interfaces",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc --declaration"
   },
-  "author": "Egor Zaitsev <heuels@gmail.com>",
+  "author": "Egor Zaitsev <heuels@grabvintage.com>",
   "license": "MIT",
   "dependencies": {
     "ts-json-schema-generator": "^0.80.0"
   },
   "devDependencies": {
-    "typescript": "^4.0.3"
+    "@types/node": "^14.14.10",
+    "typescript": "^4.1"
   },
   "peerDependencies": {
     "typescript": "*"
