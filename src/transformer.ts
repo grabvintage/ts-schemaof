@@ -1,18 +1,15 @@
-import { resolve } from 'path';
 import * as ts from 'typescript';
-import * as tsj from 'ts-json-schema-generator';
+import * as tsj from 'typescript-json-schema';
 
-let path: string | null = null;
-let generator: tsj.SchemaGenerator | null = null;
+// let path: string | null = null;
+let generator: tsj.JsonSchemaGenerator | null = null;
 
-function getGenerator(config: tsj.Config) {
-  if (config.path === path && generator) {
+function getGenerator(program: ts.Program): tsj.JsonSchemaGenerator | null {
+  if (generator) {
     return generator;
   }
 
-  path = config.path ?? null;
-  generator = tsj.createGenerator(config);
-
+  generator = tsj.buildGenerator(program, { ignoreErrors: true, noExtraProps: true, required: true });
   return generator;
 }
 
@@ -41,6 +38,8 @@ function toLiteral(input: unknown): ts.PrimaryExpression {
 
 export function transformer(program: ts.Program) {
   const typeChecker = program.getTypeChecker();
+  const schemaGenerator = getGenerator(program);
+
   const transformerFactory: ts.TransformerFactory<ts.SourceFile> = (context: ts.TransformationContext) => {
     return (sourceFile: ts.SourceFile) => {
       const visitor = (node: ts.Node): ts.Node => {
@@ -60,19 +59,11 @@ export function transformer(program: ts.Program) {
             const type = typeChecker.getTypeFromTypeNode(typeArgument);
             const symbol = type.aliasSymbol || type.symbol;
 
-            const config = {
-              // @ts-expect-error It's there, just not documented.
-              tsconfig: resolve(program.getCommonSourceDirectory(), 'tsconfig.json'),
-              path: node.getSourceFile().fileName,
-              skipTypeCheck: true,
-              expose: 'all',
-            };
-
             if (!symbol) {
               throw new Error(`Could not find symbol for passed type`);
             }
 
-            return toLiteral(getGenerator(config as any).createSchema(symbol.name));
+            return toLiteral(schemaGenerator?.getSchemaForSymbol(symbol.name));
           }
         }
 
